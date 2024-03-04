@@ -172,7 +172,7 @@ bool HttpRequest::UserVerify(const std::string &name, const std::string &pwd, bo
     if(name == "" || pwd == "") { return false; }
     LOG_INFO("Verify name:%s pwd:%s", name.c_str(), pwd.c_str());
     MYSQL* sql;
-    SqlConnRAII(&sql,  SqlConnPool::Instance());
+    SqlConnRAII(&sql, SqlConnPool::Instance());
     assert(sql);
     
     bool flag = false;
@@ -182,7 +182,7 @@ bool HttpRequest::UserVerify(const std::string &name, const std::string &pwd, bo
     MYSQL_RES *res = nullptr;
     
     if(!isLogin) { flag = true; }
-    /* 查询用户及密码 */
+    // 查询用户及密码
     snprintf(order, 256, "SELECT username, password FROM user WHERE username='%s' LIMIT 1", name.c_str());
     LOG_DEBUG("%s", order);
 
@@ -197,7 +197,7 @@ bool HttpRequest::UserVerify(const std::string &name, const std::string &pwd, bo
     while(MYSQL_ROW row = mysql_fetch_row(res)) {
         LOG_DEBUG("MYSQL ROW: %s %s", row[0], row[1]);
         std::string password(row[1]);
-        /* 注册行为 且 用户名未被使用*/
+        // 注册行为 且 用户名未被使用
         if(isLogin) {
             if(pwd == password) { flag = true; }
             else {
@@ -212,7 +212,7 @@ bool HttpRequest::UserVerify(const std::string &name, const std::string &pwd, bo
     }
     mysql_free_result(res);
 
-    /* 注册行为 且 用户名未被使用*/
+    // 注册行为 且 用户名未被使用
     if(!isLogin && flag == true) {
         LOG_DEBUG("regirster!");
         bzero(order, 256);

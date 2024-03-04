@@ -157,4 +157,4 @@ bool BlockDeque<T>::pop(T &item, int timeout) {
 }
 
 
-#endif BLOCKQUEUE_H
+#endif // BLOCKQUEUE_Hc
