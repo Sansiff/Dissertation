@@ -62,11 +62,9 @@ void HttpResponse::MakeResponse(Buffer& buff) {
     /* 判断请求的资源文件 */
     if(stat((srcDir_ + path_).data(), &mmFileStat_) < 0 || S_ISDIR(mmFileStat_.st_mode)) {
         code_ = 404;
-    }
-    else if(!(mmFileStat_.st_mode & S_IROTH)) {
+    } else if(!(mmFileStat_.st_mode & S_IROTH)) {
         code_ = 403;
-    }
-    else if(code_ == -1) { 
+    } else if(code_ == -1) { 
         code_ = 200; 
     }
     ErrorHtml_();
@@ -94,8 +92,7 @@ void HttpResponse::AddStateLine_(Buffer& buff) {
     std::string status;
     if(CODE_STATUS.count(code_) == 1) {
         status = CODE_STATUS.find(code_)->second;
-    }
-    else {
+    } else {
         code_ = 400;
         status = CODE_STATUS.find(400)->second;
     }
@@ -107,7 +104,7 @@ void HttpResponse::AddHeader_(Buffer& buff) {
     if(isKeepAlive_) {
         buff.Append("keep-alive\r\n");
         buff.Append("keep-alive: max=6, timeout=120\r\n");
-    } else{
+    } else {
         buff.Append("close\r\n");
     }
     buff.Append("Content-type: " + GetFileType_() + "\r\n");
@@ -153,8 +150,7 @@ std::string HttpResponse::GetFileType_() {
     return "text/plain";
 }
 
-void HttpResponse::ErrorContent(Buffer& buff, std::string message) 
-{
+void HttpResponse::ErrorContent(Buffer& buff, std::string message) {
     std::string body;
     std::string status;
     body += "<html><title>Error</title>";
@@ -166,7 +162,7 @@ void HttpResponse::ErrorContent(Buffer& buff, std::string message)
     }
     body += std::to_string(code_) + " : " + status  + "\n";
     body += "<p>" + message + "</p>";
-    body += "<hr><em>TinyWebServer</em></body></html>";
+    body += "<hr><em>Webserver</em></body></html>";
 
     buff.Append("Content-length: " + std::to_string(body.size()) + "\r\n\r\n");
     buff.Append(body);

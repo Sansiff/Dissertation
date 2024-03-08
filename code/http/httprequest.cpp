@@ -2,7 +2,7 @@
 
 const std::unordered_set<std::string> HttpRequest::DEFAULT_HTML{
             "/index", "/register", "/login",
-             "/welcome", "/video", "/picture", };
+             "/welcome", "/video", "/picture", "/docs" };
 
 const std::unordered_map<std::string, int> HttpRequest::DEFAULT_HTML_TAG {
             {"/register.html", 0}, {"/login.html", 1},  };
