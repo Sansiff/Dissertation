@@ -79,16 +79,13 @@ void WebServer::Start() {
             uint32_t events = epoller_->GetEvents(i);
             if(fd == listenFd_) {
                 DealListen_();
-            }
-            else if(events & (EPOLLRDHUP | EPOLLHUP | EPOLLERR)) {
+            } else if(events & (EPOLLRDHUP | EPOLLHUP | EPOLLERR)) {
                 assert(users_.count(fd) > 0);
                 CloseConn_(&users_[fd]);
-            }
-            else if(events & EPOLLIN) {
+            } else if(events & EPOLLIN) {
                 assert(users_.count(fd) > 0);
                 DealRead_(&users_[fd]);
-            }
-            else if(events & EPOLLOUT) {
+            } else if(events & EPOLLOUT) {
                 assert(users_.count(fd) > 0);
                 DealWrite_(&users_[fd]);
             } else {
@@ -130,8 +127,9 @@ void WebServer::DealListen_() {
     socklen_t len = sizeof(addr);
     do {
         int fd = accept(listenFd_, (struct sockaddr *)&addr, &len);
-        if(fd <= 0) { return;}
-        else if(HttpConn::userCount >= MAX_FD) {
+        if(fd <= 0) { 
+            return;
+        } else if(HttpConn::userCount >= MAX_FD) {
             SendError_(fd, "Server busy!");
             LOG_WARN("Clients is full!");
             return;

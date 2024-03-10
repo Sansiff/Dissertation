@@ -2,7 +2,7 @@
 
 const std::unordered_set<std::string> HttpRequest::DEFAULT_HTML{
             "/index", "/register", "/login",
-             "/welcome", "/video", "/picture", "/docs" };
+             "/welcome", "/video", "/picture", "/docs" , "/test" };
 
 const std::unordered_map<std::string, int> HttpRequest::DEFAULT_HTML_TAG {
             {"/register.html", 0}, {"/login.html", 1},  };
@@ -118,8 +118,7 @@ void HttpRequest::ParsePost_() {
                 bool isLogin = (tag == 1);
                 if(UserVerify(post_["username"], post_["password"], isLogin)) {
                     path_ = "/welcome.html";
-                } 
-                else {
+                } else {
                     path_ = "/error.html";
                 }
             }
