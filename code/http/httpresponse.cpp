@@ -53,6 +53,11 @@ void HttpResponse::Init(const std::string& srcDir, std::string& path, bool isKee
     code_ = code;
     isKeepAlive_ = isKeepAlive;
     path_ = path;
+    if(path_ != "test.html" && path_.back() == 'l') {
+        htmlcode = 1;
+    } else if(path_ == "test.html") {
+        htmlcode = 2;
+    }
     srcDir_ = srcDir;
     mmFile_ = nullptr; 
     mmFileStat_ = { 0 };
@@ -70,6 +75,9 @@ void HttpResponse::MakeResponse(Buffer& buff) {
     ErrorHtml_();
     AddStateLine_(buff);
     AddHeader_(buff);
+    if(html == 2) {
+        AddFileListPage_();
+    }
     AddContent_(buff);
 }
 
@@ -130,6 +138,7 @@ void HttpResponse::AddContent_(Buffer& buff) {
     buff.Append("Content-length: " + std::to_string(mmFileStat_.st_size) + "\r\n\r\n");
 }
 
+
 void HttpResponse::UnmapFile() {
     if(mmFile_) {
         munmap(mmFile_, mmFileStat_.st_size);
@@ -166,4 +175,25 @@ void HttpResponse::ErrorContent(Buffer& buff, std::string message) {
 
     buff.Append("Content-length: " + std::to_string(body.size()) + "\r\n\r\n");
     buff.Append(body);
+}
+
+void HttpResponse::getFileVec_(const std::string dirName, std::vector<std::string> &resVec) {
+    DIR *dir;   // 目录指针
+    dir = opendir(dirName.c_str());
+    struct dirent *stdinfo;
+    while (true) {
+        // 获取文件夹中的一个文件
+        stdinfo = readdir(dir);
+        if (stdinfo == nullptr) {
+            break;
+        }
+        resVec.push_back(stdinfo->d_name);
+        if(resVec.back() == "." || resVec.back() == ".."){
+            resVec.pop_back();
+        }
+    }
+}
+
+void HttpResponse::AddFileListPage_(Buffer& buff) {
+    
 }

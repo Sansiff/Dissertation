@@ -1,4 +1,5 @@
 #include "httprequest.h"
+#include <iostream>
 
 const std::unordered_set<std::string> HttpRequest::DEFAULT_HTML{
             "/index", "/register", "/login",
@@ -21,10 +22,10 @@ bool HttpRequest::IsKeepAlive() const {
     return false;
 }
 
-bool HttpRequest::parse(Buffer& buff) {
+int HttpRequest::parse(Buffer& buff) {
     const char CRLF[] = "\r\n";
     if(buff.ReadableBytes() <= 0) {
-        return false;
+        return 0;
     }
     while(buff.ReadableBytes() && state_ != FINISH) {
         const char* lineEnd = std::search(buff.Peek(), buff.BeginWriteConst(), CRLF, CRLF + 2);
@@ -53,14 +54,14 @@ bool HttpRequest::parse(Buffer& buff) {
         buff.RetrieveUntil(lineEnd + 2);
     }
     LOG_DEBUG("[%s], [%s], [%s]", method_.c_str(), path_.c_str(), version_.c_str());
-    return true;
+    // std::cout << path_.c_str() << std::endl << "FUCK\n";
+    return 1;
 }
 
 void HttpRequest::ParsePath_() {
     if(path_ == "/") {
         path_ = "/index.html"; 
-    }
-    else {
+    } else {
         for(auto &item: DEFAULT_HTML) {
             if(item == path_) {
                 path_ += ".html";

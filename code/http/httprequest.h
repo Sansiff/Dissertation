@@ -16,28 +16,28 @@
 class HttpRequest {
 public:
     enum PARSE_STATE {
-        REQUEST_LINE,
-        HEADERS,
-        BODY,
-        FINISH,        
+        REQUEST_LINE,   // 请求行
+        HEADERS,        // 请求头
+        BODY,           // 请求体
+        FINISH,         // 解析完成
     };
 
     enum HTTP_CODE {
-        NO_REQUEST = 0,
-        GET_REQUEST,
-        BAD_REQUEST,
-        NO_RESOURSE,
-        FORBIDDENT_REQUEST,
-        FILE_REQUEST,
-        INTERNAL_ERROR,
-        CLOSED_CONNECTION,
+        NO_REQUEST = 0,     // 无请求
+        GET_REQUEST,        // GET请求
+        BAD_REQUEST,        // 错误的请求
+        NO_RESOURSE,        // 没有资源
+        FORBIDDENT_REQUEST, // 禁止请求
+        FILE_REQUEST,       // 文件请求
+        INTERNAL_ERROR,     // 内容出错
+        CLOSED_CONNECTION,  // 连接关闭
     };
     
     HttpRequest() { Init(); }
     ~HttpRequest() = default;
 
     void Init();
-    bool parse(Buffer& buff);
+    int parse(Buffer& buff);
 
     std::string path() const;
     std::string& path();

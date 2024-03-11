@@ -10,6 +10,9 @@
 #include "../buffer/buffer.h"
 #include "../log/log.h"
 
+#include <dirent.h>
+#include <fstream>
+#include <vector>
 class HttpResponse {
 public:
     HttpResponse();
@@ -36,6 +39,10 @@ private:
 
     std::string path_;
     std::string srcDir_;
+    
+    int htmlcode; // fileserver need udpate html
+    void getFileVec_(const std::string dirName, std::vector<std::string> &resVec);
+    void AddFileListPage_(std::string &fileListHtml);
     
     char* mmFile_; 
     struct stat mmFileStat_;

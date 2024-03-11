@@ -78,14 +78,18 @@ void WebServer::Start() {
             int fd = epoller_->GetEventFd(i);
             uint32_t events = epoller_->GetEvents(i);
             if(fd == listenFd_) {
+                // 新的连接
                 DealListen_();
             } else if(events & (EPOLLRDHUP | EPOLLHUP | EPOLLERR)) {
+                // 关闭连接
                 assert(users_.count(fd) > 0);
                 CloseConn_(&users_[fd]);
             } else if(events & EPOLLIN) {
+                // 读事件
                 assert(users_.count(fd) > 0);
                 DealRead_(&users_[fd]);
             } else if(events & EPOLLOUT) {
+                // 写事件
                 assert(users_.count(fd) > 0);
                 DealWrite_(&users_[fd]);
             } else {
@@ -181,15 +185,14 @@ void WebServer::OnWrite_(HttpConn* client) {
     int writeErrno = 0;
     ret = client->write(&writeErrno);
     if(client->ToWriteBytes() == 0) {
-        /* 传输完成 */
+        // 传输完成
         if(client->IsKeepAlive()) {
             OnProcess(client);
             return;
         }
-    }
-    else if(ret < 0) {
+    } else if(ret < 0) {
         if(writeErrno == EAGAIN) {
-            /* 继续传输 */
+            // 继续传输
             epoller_->ModFd(client->GetFd(), connEvent_ | EPOLLOUT);
             return;
         }
