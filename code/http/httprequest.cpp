@@ -3,7 +3,7 @@
 
 const std::unordered_set<std::string> HttpRequest::DEFAULT_HTML{
             "/index", "/register", "/login",
-             "/welcome", "/video", "/picture", "/docs" , "/test" };
+             "/welcome", "/video", "/picture", "/docs"};
 
 const std::unordered_map<std::string, int> HttpRequest::DEFAULT_HTML_TAG {
             {"/register.html", 0}, {"/login.html", 1},  };
@@ -34,7 +34,7 @@ int HttpRequest::parse(Buffer& buff) {
         {
         case REQUEST_LINE:
             if(!ParseRequestLine_(line)) {
-                return false;
+                return 0;
             }
             ParsePath_();
             break;    
@@ -54,7 +54,6 @@ int HttpRequest::parse(Buffer& buff) {
         buff.RetrieveUntil(lineEnd + 2);
     }
     LOG_DEBUG("[%s], [%s], [%s]", method_.c_str(), path_.c_str(), version_.c_str());
-    // std::cout << path_.c_str() << std::endl << "FUCK\n";
     return 1;
 }
 

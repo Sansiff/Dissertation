@@ -35,6 +35,8 @@ const std::unordered_map<int, std::string> HttpResponse::CODE_PATH = {
     { 404, "/404.html" },
 };
 
+int64_t HttpResponse::fd_ = 0;
+
 HttpResponse::HttpResponse() {
     code_ = -1;
     path_ = srcDir_ = "";
@@ -53,11 +55,6 @@ void HttpResponse::Init(const std::string& srcDir, std::string& path, bool isKee
     code_ = code;
     isKeepAlive_ = isKeepAlive;
     path_ = path;
-    if(path_ != "test.html" && path_.back() == 'l') {
-        htmlcode = 1;
-    } else if(path_ == "test.html") {
-        htmlcode = 2;
-    }
     srcDir_ = srcDir;
     mmFile_ = nullptr; 
     mmFileStat_ = { 0 };
@@ -65,20 +62,36 @@ void HttpResponse::Init(const std::string& srcDir, std::string& path, bool isKee
 
 void HttpResponse::MakeResponse(Buffer& buff) {
     /* 判断请求的资源文件 */
-    if(stat((srcDir_ + path_).data(), &mmFileStat_) < 0 || S_ISDIR(mmFileStat_.st_mode)) {
-        code_ = 404;
-    } else if(!(mmFileStat_.st_mode & S_IROTH)) {
-        code_ = 403;
-    } else if(code_ == -1) { 
-        code_ = 200; 
+    // download
+    std::regex patten(".*filedir.*");
+    std::smatch subMatch;
+    
+    //下载
+    if(regex_match(path_, subMatch, patten)) {
+        std::filesystem::path filePath = path_;
+        path_ = "filedir/" + filePath.filename().string();
     }
-    ErrorHtml_();
-    AddStateLine_(buff);
-    AddHeader_(buff);
-    if(html == 2) {
+    if(path_ == "/docs.html") {
+        ErrorHtml_();
+        AddStateLine_(buff);
+        AddHeader_(buff);
         AddFileListPage_();
+        stat(filelistsrc.data(), &mmFileStat_);
+        S_ISDIR(mmFileStat_.st_mode);
+        AddContent_(buff);
+    } else {
+        if(stat((srcDir_ + path_).data(), &mmFileStat_) < 0 || S_ISDIR(mmFileStat_.st_mode)) {
+            code_ = 404;
+        } else if(!(mmFileStat_.st_mode & S_IROTH)) {
+            code_ = 403;
+        } else if(code_ == -1) { 
+            code_ = 200; 
+        }
+        ErrorHtml_();
+        AddStateLine_(buff);
+        AddHeader_(buff);
+        AddContent_(buff);
     }
-    AddContent_(buff);
 }
 
 char* HttpResponse::File() {
@@ -119,7 +132,15 @@ void HttpResponse::AddHeader_(Buffer& buff) {
 }
 
 void HttpResponse::AddContent_(Buffer& buff) {
-    int srcFd = open((srcDir_ + path_).data(), O_RDONLY);
+    std::cout << path_;
+    std::string filepath_;
+    if(path_ == "/docs.html") {
+        filepath_ = filelistsrc;
+    } else {
+        filepath_ = srcDir_ + path_;
+    }
+
+    int srcFd = open(filepath_.data(), O_RDONLY);
     if(srcFd < 0) { 
         ErrorContent(buff, "File NotFound!");
         return; 
@@ -127,7 +148,7 @@ void HttpResponse::AddContent_(Buffer& buff) {
 
     /* 将文件映射到内存提高文件的访问速度 
         MAP_PRIVATE 建立一个写入时拷贝的私有映射*/
-    LOG_DEBUG("file path %s", (srcDir_ + path_).data());
+    LOG_DEBUG("file path %s", filepath_.data());
     int* mmRet = (int*)mmap(0, mmFileStat_.st_size, PROT_READ, MAP_PRIVATE, srcFd, 0);
     if(*mmRet == -1) {
         ErrorContent(buff, "File NotFound!");
@@ -136,6 +157,9 @@ void HttpResponse::AddContent_(Buffer& buff) {
     mmFile_ = (char*)mmRet;
     close(srcFd);
     buff.Append("Content-length: " + std::to_string(mmFileStat_.st_size) + "\r\n\r\n");
+    if(path_ == "/docs.html") {
+        // std::remove(filelistsrc.c_str());
+    }
 }
 
 
@@ -194,6 +218,33 @@ void HttpResponse::getFileVec_(const std::string dirName, std::vector<std::strin
     }
 }
 
-void HttpResponse::AddFileListPage_(Buffer& buff) {
+void HttpResponse::AddFileListPage_() {
+    std::vector<std::string> fileVec;
+    getFileVec_(srcDir_ + "filedir/", fileVec);
     
+    // 结果保存到 resources/id_file.html
+    filelistsrc = "resources/" + std::to_string(fd_) + "_filelist.html";
+    std::ifstream inFile("resources/filelist.html", std::ios::in);
+    std::ofstream outFile(filelistsrc);
+    std::string tempLine;
+    // 首先读取文件列表的 <!--filelist_label--> 注释前的语句
+    int cnt = 67;
+    while(cnt --){
+        getline(inFile, tempLine);
+        outFile << tempLine + "\n";
+    }
+    // 根据如下标签，将将文件夹中的所有文件项添加到返回页面中
+    //             <tr><td class="col1">filenamename</td> <td class="col2"><a href="file/filename">下载</a></td> <td class="col3"><a href="delete/filename">删除</a></td></tr>
+    for(const auto &filename : fileVec){
+        outFile << "            <tr><td class=\"col1\">" + filename +
+                    "</td> <td class=\"col2\"><a href=\"filedir/" + filename +
+                    "\" download>下载</a></td> <td class=\"col3\"><a href=\"delete/" + filename +
+                    "\" onclick=\"return confirmDelete();\">删除</a></td></tr>" + "\n";
+    }
+    // 将文件列表注释后的语句加入后面
+    while(getline(inFile, tempLine)){
+        outFile << tempLine + "\n";
+    }
+    inFile.close();
+    outFile.close();
 }

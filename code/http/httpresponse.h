@@ -7,6 +7,10 @@
 #include <sys/stat.h>    // stat
 #include <sys/mman.h>    // mmap, munmap
 
+#include <regex>
+#include <filesystem>
+#include <iostream>
+
 #include "../buffer/buffer.h"
 #include "../log/log.h"
 
@@ -40,9 +44,11 @@ private:
     std::string path_;
     std::string srcDir_;
     
-    int htmlcode; // fileserver need udpate html
+    // int htmlcode; // fileserver need udpate html
     void getFileVec_(const std::string dirName, std::vector<std::string> &resVec);
-    void AddFileListPage_(std::string &fileListHtml);
+    void AddFileListPage_();
+    static int64_t fd_;
+    std::string filelistsrc;
     
     char* mmFile_; 
     struct stat mmFileStat_;
