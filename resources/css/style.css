@@ -1,13 +1,13 @@
 
 @import url('https://fonts.googleapis.com/css?family=Muli:200,300,400');
 
-body {
+/* body {
   background: #ffffff;
   font-family: 'Muli', sans-serif;
   font-style: normal;
   font-weight: 300;
   overflow-x: hidden;
-}
+} */
 
 html, body {
   width: 100%;
@@ -64,7 +64,7 @@ strong, span {
   Buttons               
 -----------------------------------------*/
 
-.section-btn {
+/* .section-btn {
   background: #d7b065;
   border: none;
   border-radius: 50px;
@@ -76,7 +76,7 @@ strong, span {
   margin-top: 32px;
   -webkit-transition: all ease-in-out 0.4s;
   transition: all ease-in-out 0.4s;
-}
+} */
 
 .section-btn:focus,
 .section-btn:hover {
@@ -313,7 +313,7 @@ a:hover, a:active, a:focus {
 /*---------------------------------------
   About section              
 -----------------------------------------*/
-
+/* 
 #about .section-title {
   padding-bottom: 16px;
 }
@@ -334,7 +334,7 @@ a:hover, a:active, a:focus {
   display: block;
   padding-top: 4px;
 }
-
+ */
 
 
 /*---------------------------------------
