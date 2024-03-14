@@ -3,10 +3,10 @@
 
 const std::unordered_set<std::string> HttpRequest::DEFAULT_HTML{
             "/index", "/register", "/login",
-             "/welcome", "/video", "/picture", "/docs"};
+             "/welcome", "/video", "/picture", "/docs", "/test", "/upload"};
 
 const std::unordered_map<std::string, int> HttpRequest::DEFAULT_HTML_TAG {
-            {"/register.html", 0}, {"/login.html", 1},  };
+            {"/register.html", 0}, {"/login.html", 1},  {"/upload.html", 3} };
 
 void HttpRequest::Init() {
     method_ = path_ = version_ = body_ = "";

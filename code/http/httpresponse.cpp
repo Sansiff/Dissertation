@@ -63,14 +63,20 @@ void HttpResponse::Init(const std::string& srcDir, std::string& path, bool isKee
 void HttpResponse::MakeResponse(Buffer& buff) {
     /* 判断请求的资源文件 */
     // download
-    std::regex patten(".*filedir.*");
+    std::regex downloadPatten(".*download.*");
+    std::regex deletePatten(".*delete.*");
     std::smatch subMatch;
+    std::filesystem::path filePath = path_;
     
-    //下载
-    if(regex_match(path_, subMatch, patten)) {
-        std::filesystem::path filePath = path_;
+    if(regex_match(path_, subMatch, downloadPatten)) {
+        // download file
         path_ = "filedir/" + filePath.filename().string();
+    } else if(regex_match(path_, subMatch, deletePatten)) {
+        // delete file
+        int ret = std::remove((srcDir_ + "filedir/" + filePath.filename().string()).c_str());
+        path_ = "/docs.html";
     }
+    
     if(path_ == "/docs.html") {
         ErrorHtml_();
         AddStateLine_(buff);
@@ -132,7 +138,6 @@ void HttpResponse::AddHeader_(Buffer& buff) {
 }
 
 void HttpResponse::AddContent_(Buffer& buff) {
-    std::cout << path_;
     std::string filepath_;
     if(path_ == "/docs.html") {
         filepath_ = filelistsrc;
@@ -158,7 +163,7 @@ void HttpResponse::AddContent_(Buffer& buff) {
     close(srcFd);
     buff.Append("Content-length: " + std::to_string(mmFileStat_.st_size) + "\r\n\r\n");
     if(path_ == "/docs.html") {
-        // std::remove(filelistsrc.c_str());
+        std::remove(filelistsrc.c_str());
     }
 }
 
@@ -228,16 +233,16 @@ void HttpResponse::AddFileListPage_() {
     std::ofstream outFile(filelistsrc);
     std::string tempLine;
     // 首先读取文件列表的 <!--filelist_label--> 注释前的语句
-    int cnt = 67;
-    while(cnt --){
+    while(true){
         getline(inFile, tempLine);
+        if(tempLine == "<!--filelist_label-->") break;
         outFile << tempLine + "\n";
     }
     // 根据如下标签，将将文件夹中的所有文件项添加到返回页面中
     //             <tr><td class="col1">filenamename</td> <td class="col2"><a href="file/filename">下载</a></td> <td class="col3"><a href="delete/filename">删除</a></td></tr>
     for(const auto &filename : fileVec){
         outFile << "            <tr><td class=\"col1\">" + filename +
-                    "</td> <td class=\"col2\"><a href=\"filedir/" + filename +
+                    "</td> <td class=\"col2\"><a href=\"download/" + filename +
                     "\" download>下载</a></td> <td class=\"col3\"><a href=\"delete/" + filename +
                     "\" onclick=\"return confirmDelete();\">删除</a></td></tr>" + "\n";
     }
