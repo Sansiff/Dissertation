@@ -7,6 +7,8 @@
 #include <regex>
 #include <errno.h>     
 #include <mysql/mysql.h>  //mysql
+#include <iostream>
+#include <fstream>
 
 #include "../buffer/buffer.h"
 #include "../log/log.h"
@@ -56,19 +58,25 @@ public:
 
 private:
     bool ParseRequestLine_(const std::string& line);
-    void ParseHeader_(const std::string& line);
-    void ParseBody_(const std::string& line);
+    HTTP_CODE ParseHeader_(const std::string& line);
+    HTTP_CODE ParseBody_(const std::string& line);
 
     void ParsePath_();
     void ParsePost_();
     void ParseFromUrlencoded_();
+    void ParseFormData();
 
     static bool UserVerify(const std::string& name, const std::string& pwd, bool isLogin);
 
     PARSE_STATE state_;
     std::string method_, path_, version_, body_;
+
+    bool linger;
+    size_t contentLen;
+
     std::unordered_map<std::string, std::string> header_;
     std::unordered_map<std::string, std::string> post_;
+    std::unordered_map<std::string, std::string> fileInfo_;
 
     static const std::unordered_set<std::string> DEFAULT_HTML;
     static const std::unordered_map<std::string, int> DEFAULT_HTML_TAG;

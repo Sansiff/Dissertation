@@ -1,5 +1,7 @@
 #include "httprequest.h"
-#include <iostream>
+
+
+const char CRLF[] = "\r\n";
 
 const std::unordered_set<std::string> HttpRequest::DEFAULT_HTML{
             "/index", "/register", "/login",
@@ -28,13 +30,30 @@ int HttpRequest::parse(Buffer& buff) {
         return 0;
     }
     while(buff.ReadableBytes() && state_ != FINISH) {
-        const char* lineEnd = std::search(buff.Peek(), buff.BeginWriteConst(), CRLF, CRLF + 2);
-        std::string line(buff.Peek(), lineEnd);
-        switch(state_)
-        {
+        const char* lineEnd;
+        std::string line;
+        // const char* lineEnd = std::search(buff.Peek(), buff.BeginWriteConst(), CRLF, CRLF + 2);
+        // std::string line(buff.Peek(), lineEnd);
+        
+        if (state_ != BODY) {
+            // 找到返回第一个字符串下标
+            lineEnd = std::search(buff.Peek(), buff.BeginWriteConst(), CRLF, CRLF + 2);
+            // 如果没有找到CRLF， 也不是BODY，则请求不完整
+            if(lineEnd == buff.BeginWrite() && state_ == HEADERS) return NO_REQUEST;
+            line = std::string(buff.Peek(), lineEnd);
+            buff.RetrieveUntil(lineEnd + 2); // 除消息体外，都有换行符
+        } else {
+            // 消息体读取全部内容，同时清空缓存
+            body_ += buff.RetrieveAllToStr();
+            if(body_.size() < contentLen) {
+                return NO_REQUEST;
+            }
+        }
+        
+        switch(state_) {
         case REQUEST_LINE:
             if(!ParseRequestLine_(line)) {
-                return 0;
+                return BAD_REQUEST;
             }
             ParsePath_();
             break;    
@@ -51,7 +70,7 @@ int HttpRequest::parse(Buffer& buff) {
             break;
         }
         if(lineEnd == buff.BeginWrite()) { break; }
-        buff.RetrieveUntil(lineEnd + 2);
+        // buff.RetrieveUntil(lineEnd + 2);
     }
     LOG_DEBUG("[%s], [%s], [%s]", method_.c_str(), path_.c_str(), version_.c_str());
     return 1;
@@ -84,22 +103,55 @@ bool HttpRequest::ParseRequestLine_(const std::string& line) {
     return false;
 }
 
-void HttpRequest::ParseHeader_(const std::string& line) {
+HttpRequest::HTTP_CODE HttpRequest::ParseHeader_(const std::string& line) {
     std::regex patten("^([^:]*): ?(.*)$");
     std::smatch subMatch;
     if(regex_match(line, subMatch, patten)) {
         header_[subMatch[1]] = subMatch[2];
+        if(subMatch[1] == "Connection") {
+            linger = (subMatch[2] == "keep-alived");
+        } else if(subMatch[1] == "Content-Length") {
+            contentLen = stoi(subMatch[2]);
+        }
+        return NO_REQUEST;
+    } else if(contentLen) {
+        state_ = BODY;
+        return NO_REQUEST;
     }
     else {
-        state_ = BODY;
+        return GET_REQUEST;
     }
 }
 
-void HttpRequest::ParseBody_(const std::string& line) {
-    body_ = line;
-    ParsePost_();
-    state_ = FINISH;
-    LOG_DEBUG("Body:%s, len:%d", line.c_str(), line.size());
+HttpRequest::HTTP_CODE HttpRequest::ParseBody_(const std::string& line) {
+    // body_ = line;
+    // ParsePost_();
+    // state_ = FINISH;
+    // LOG_DEBUG("Body:%s, len:%d", line.c_str(), line.size());
+
+    if(method_ == "POST" && header_["Content-Type"] == "application/x-www-form-urlencoded") {
+        ParseFromUrlencoded_(); 
+        if(DEFAULT_HTML_TAG.count(path_)) {
+            // tag=1: login, tag=0: register
+            int tag = DEFAULT_HTML_TAG.find(path_)->second;
+            LOG_DEBUG("Tag:%d", tag);
+            if(UserVerify(post_["username"], post_["password"], tag)) {
+                path_ = "/welcome.html";
+            } else {
+                path_ = "/error.html";
+            }
+        }
+    } else if (method_ == "POST" && header_["Content-Type"].find("multipart/form-data") != std::string::npos) {
+        ParseFormData();
+        LOG_INFO("upload file");
+        std::ofstream ofs;
+        ofs.open("./resources/response.txt", std::ios::ate);
+        ofs << "./resources/files/" << fileInfo_["filename"];
+        ofs.close();
+        path_ = "/response.txt";
+    }
+    LOG_DEBUG("Body:%s len:%d", body_.c_str(), body_.size());
+    return GET_REQUEST;
 }
 
 int HttpRequest::ConverHex(char ch) {
@@ -165,6 +217,29 @@ void HttpRequest::ParseFromUrlencoded_() {
         value = body_.substr(j, i - j);
         post_[key] = value;
     }
+}
+
+void HttpRequest::ParseFormData() {
+    if(body_.size() == 0) return;
+    size_t st = 0, ed = 0;
+    ed = body_.find(CRLF);
+    std::string boundary = body_.substr(0, ed);
+
+    // 解析文件信息
+    st = body_.find("filename=\"", ed) + strlen("filename=\"");
+    ed = body_.find("\"", st);
+    fileInfo_["filename"] = body_.substr(st, ed - st);
+    
+    // 解析文件内容，文件内容以\r\n\r\n开始
+    st = body_.find("\r\n\r\n", ed) + strlen("\r\n\r\n");
+    ed = body_.find(boundary, st) - 2; // 文件结尾也有\r\n
+    std::string content = body_.substr(st, ed - st);
+
+    std::ofstream ofs;
+    // 如果文件分多次发送，应该采用app，同时为避免重复上传，应该用md5做校验
+    ofs.open("./resources/files/" + fileInfo_["filename"], std::ios::ate);
+    ofs << content;
+    ofs.close();
 }
 
 bool HttpRequest::UserVerify(const std::string &name, const std::string &pwd, bool isLogin) {

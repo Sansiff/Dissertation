@@ -63,6 +63,7 @@ ssize_t HttpConn::read(int* saveErrno) {
 }
 
 ssize_t HttpConn::write(int* saveErrno) {
+    // 最后一次写入的长度
     ssize_t len = -1;
     do {
         len = writev(fd_, iov_, iovCnt_);
@@ -70,16 +71,23 @@ ssize_t HttpConn::write(int* saveErrno) {
             *saveErrno = errno;
             break;
         }
-        if(iov_[0].iov_len + iov_[1].iov_len  == 0) { break; } /* 传输结束 */
-        else if(static_cast<size_t>(len) > iov_[0].iov_len) {
+        if(iov_[0].iov_len + iov_[1].iov_len  == 0) { 
+            // 缓存为空，传输完成
+            break;
+        } else if(static_cast<size_t>(len) > iov_[0].iov_len) {
+            // 响应头已经传输完成
+            // 更新相应体传输起点和长度
             iov_[1].iov_base = (uint8_t*) iov_[1].iov_base + (len - iov_[0].iov_len);
             iov_[1].iov_len -= (len - iov_[0].iov_len);
+            // 响应头不需要传输
             if(iov_[0].iov_len) {
+                // 响应头保存在写缓存中，全部回收即可
                 writeBuff_.RetrieveAll();
                 iov_[0].iov_len = 0;
             }
-        }
-        else {
+        } else {
+            // 响应头还没传输完成
+            // 更新相应头传输起点和长度
             iov_[0].iov_base = (uint8_t*)iov_[0].iov_base + len; 
             iov_[0].iov_len -= len; 
             writeBuff_.Retrieve(len);
@@ -92,7 +100,7 @@ bool HttpConn::process() {
     request_.Init();
     if(readBuff_.ReadableBytes() <= 0) {
         return false;
-    } else if(request_.parse(readBuff_)) {
+    } else if(request_.parse(readBuff_) == HttpRequest::HTTP_CODE::GET_REQUEST) {
         LOG_DEBUG("%s", request_.path().c_str());
         response_.Init(srcDir, request_.path(), request_.IsKeepAlive(), 200);
     } else {
@@ -105,7 +113,7 @@ bool HttpConn::process() {
     iov_[0].iov_len = writeBuff_.ReadableBytes();
     iovCnt_ = 1;
 
-    /* 文件 */
+    // 相应体
     if(response_.FileLen() > 0  && response_.File()) {
         iov_[1].iov_base = response_.File();
         iov_[1].iov_len = response_.FileLen();
